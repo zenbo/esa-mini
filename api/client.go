@@ -9,11 +9,12 @@ import (
 	"os"
 )
 
-const baseURL = "https://api.esa.io"
+const defaultBaseURL = "https://api.esa.io"
 
 type Client struct {
 	token      string
 	httpClient *http.Client
+	baseURL    string
 }
 
 func NewClient() (*Client, error) {
@@ -21,14 +22,19 @@ func NewClient() (*Client, error) {
 	if token == "" {
 		return nil, fmt.Errorf("ESA_ACCESS_TOKEN is not set")
 	}
+	base := os.Getenv("ESA_API_BASE_URL")
+	if base == "" {
+		base = defaultBaseURL
+	}
 	return &Client{
 		token:      token,
 		httpClient: &http.Client{},
+		baseURL:    base,
 	}, nil
 }
 
 func (c *Client) do(method, path string, body io.Reader) ([]byte, error) {
-	url := baseURL + path
+	url := c.baseURL + path
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err

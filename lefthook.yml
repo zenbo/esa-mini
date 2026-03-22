@@ -1,0 +1,11 @@
+pre-commit:
+  commands:
+    fmt:
+      glob: "*.go"
+      run: gofmt -l -w {staged_files} && git add {staged_files}
+    lint:
+      glob: "*.go"
+      run: golangci-lint run {staged_files}
+    test:
+      glob: "*.go"
+      run: go test ./...

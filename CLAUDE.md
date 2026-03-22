@@ -2,8 +2,8 @@
 
 ## 仕様・設計
 
-- 詳細仕様: `SPEC.md`
 - Agent Skill 定義: `SKILL.md`
+- esa API ドキュメント: https://docs.esa.io/posts/102
 
 ## 規約
 

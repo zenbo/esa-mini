@@ -4,7 +4,7 @@ builds:
   - main: .
     binary: esa-mini
     ldflags:
-      - -s -w
+      - -s -w -X github.com/zenbo/esa-mini/cmd.version={{.Version}}
     goos:
       - darwin
       - linux

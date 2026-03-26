@@ -36,14 +36,13 @@ func newGetCmd() *cobra.Command {
 
 			wip := post.WIP
 			fm := frontmatter.Frontmatter{
-				Number:         post.Number,
-				Title:          post.Name,
-				URL:            post.URL,
-				Category:       post.Category,
-				Tags:           post.Tags,
-				WIP:            &wip,
-				UpdatedAt:      post.UpdatedAt,
-				RevisionNumber: post.RevisionNumber,
+				Number:    post.Number,
+				Title:     post.Name,
+				URL:       post.URL,
+				Category:  post.Category,
+				Tags:      post.Tags,
+				WIP:       &wip,
+				UpdatedAt: post.UpdatedAt,
 			}
 
 			content, err := frontmatter.Format(fm, post.BodyMd)

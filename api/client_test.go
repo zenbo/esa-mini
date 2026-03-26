@@ -84,15 +84,14 @@ func TestGetPost(t *testing.T) {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
 		post := Post{
-			Number:         123,
-			Name:           "テスト記事",
-			BodyMd:         "# Hello",
-			URL:            "https://docs.esa.io/posts/123",
-			WIP:            false,
-			Tags:           []string{"go"},
-			Category:       "dev/tips",
-			UpdatedAt:      "2025-07-01T12:00:00+09:00",
-			RevisionNumber: 5,
+			Number:    123,
+			Name:      "テスト記事",
+			BodyMd:    "# Hello",
+			URL:       "https://docs.esa.io/posts/123",
+			WIP:       false,
+			Tags:      []string{"go"},
+			Category:  "dev/tips",
+			UpdatedAt: "2025-07-01T12:00:00+09:00",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(post); err != nil {
@@ -113,9 +112,6 @@ func TestGetPost(t *testing.T) {
 	}
 	if post.BodyMd != "# Hello" {
 		t.Errorf("BodyMd = %q", post.BodyMd)
-	}
-	if post.RevisionNumber != 5 {
-		t.Errorf("RevisionNumber = %d", post.RevisionNumber)
 	}
 }
 
@@ -167,78 +163,36 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestUpdatePost(t *testing.T) {
-	t.Run("normal update", func(t *testing.T) {
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/v1/teams/docs/posts/123" {
-				t.Errorf("path = %q", r.URL.Path)
-			}
-			if r.Method != http.MethodPatch {
-				t.Errorf("method = %q, want PATCH", r.Method)
-			}
-
-			var req UpdatePostRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("failed to decode: %v", err)
-			}
-			if req.Post.OriginalRevision == nil {
-				t.Fatal("expected original_revision")
-			}
-			if req.Post.OriginalRevision.Number != 5 {
-				t.Errorf("original_revision.number = %d", req.Post.OriginalRevision.Number)
-			}
-
-			resp := Post{
-				Number:     123,
-				Name:       "更新された記事",
-				URL:        "https://docs.esa.io/posts/123",
-				OverLapped: false,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				t.Fatal(err)
-			}
-		})
-
-		client := newTestClient(t, handler)
-		post, err := client.UpdatePost("docs", 123, UpdatePostBody{
-			Name:             "更新された記事",
-			BodyMd:           "更新本文",
-			OriginalRevision: &OriginalRevision{Number: 5},
-		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/teams/docs/posts/123" {
+			t.Errorf("path = %q", r.URL.Path)
 		}
-		if post.OverLapped {
-			t.Error("expected no overlap")
+		if r.Method != http.MethodPatch {
+			t.Errorf("method = %q, want PATCH", r.Method)
+		}
+
+		resp := Post{
+			Number: 123,
+			Name:   "更新された記事",
+			URL:    "https://docs.esa.io/posts/123",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
 		}
 	})
 
-	t.Run("conflict detected", func(t *testing.T) {
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			resp := Post{
-				Number:     123,
-				Name:       "更新された記事",
-				URL:        "https://docs.esa.io/posts/123",
-				OverLapped: true,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				t.Fatal(err)
-			}
-		})
-
-		client := newTestClient(t, handler)
-		post, err := client.UpdatePost("docs", 123, UpdatePostBody{
-			Name:             "更新された記事",
-			OriginalRevision: &OriginalRevision{Number: 3},
-		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !post.OverLapped {
-			t.Error("expected overlap")
-		}
+	client := newTestClient(t, handler)
+	post, err := client.UpdatePost("docs", 123, UpdatePostBody{
+		Name:   "更新された記事",
+		BodyMd: "更新本文",
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if post.Name != "更新された記事" {
+		t.Errorf("Name = %q", post.Name)
+	}
 }
 
 func TestAPIError(t *testing.T) {

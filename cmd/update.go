@@ -46,12 +46,6 @@ func newUpdateCmd() *cobra.Command {
 			if doc.Frontmatter.WIP != nil {
 				body.WIP = doc.Frontmatter.WIP
 			}
-			if doc.Frontmatter.RevisionNumber > 0 {
-				body.OriginalRevision = &api.OriginalRevision{
-					Number: doc.Frontmatter.RevisionNumber,
-				}
-			}
-
 			// CLI flags override frontmatter
 			if cmd.Flags().Changed("name") {
 				body.Name = name
@@ -79,11 +73,7 @@ func newUpdateCmd() *cobra.Command {
 				return cliError("esa-mini update", formatAPIError(err), "Check your input and permissions.")
 			}
 
-			if post.OverLapped {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated: #%d (conflict detected, merged by server)\nTitle:   %s\nURL:     %s\n", post.Number, post.Name, post.URL)
-			} else {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated: #%d\nTitle:   %s\nURL:     %s\n", post.Number, post.Name, post.URL)
-			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated: #%d\nTitle:   %s\nURL:     %s\n", post.Number, post.Name, post.URL)
 			return nil
 		},
 	}

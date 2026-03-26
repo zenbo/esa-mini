@@ -58,15 +58,14 @@ func TestTeamsCmd(t *testing.T) {
 func TestGetCmd(t *testing.T) {
 	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		post := api.Post{
-			Number:         123,
-			Name:           "テスト記事",
-			BodyMd:         "# Hello",
-			URL:            "https://docs.esa.io/posts/123",
-			WIP:            false,
-			Tags:           []string{"go"},
-			Category:       "dev/tips",
-			UpdatedAt:      "2025-07-01T12:00:00+09:00",
-			RevisionNumber: 5,
+			Number:    123,
+			Name:      "テスト記事",
+			BodyMd:    "# Hello",
+			URL:       "https://docs.esa.io/posts/123",
+			WIP:       false,
+			Tags:      []string{"go"},
+			Category:  "dev/tips",
+			UpdatedAt: "2025-07-01T12:00:00+09:00",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(post); err != nil {
@@ -240,87 +239,43 @@ func TestCreateCmdCLIOverrides(t *testing.T) {
 }
 
 func TestUpdateCmd(t *testing.T) {
-	t.Run("normal update", func(t *testing.T) {
-		server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPatch {
-				t.Errorf("method = %q, want PATCH", r.Method)
-			}
-			resp := api.Post{
-				Number:     123,
-				Name:       "更新された記事",
-				URL:        "https://docs.esa.io/posts/123",
-				OverLapped: false,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				t.Fatal(err)
-			}
-		}))
-
-		t.Setenv("ESA_ACCESS_TOKEN", "test-token")
-		t.Setenv("ESA_API_BASE_URL", server)
-
-		inputFile := filepath.Join(t.TempDir(), "input.md")
-		content := "---\ntitle: 更新された記事\nrevision_number: 5\n---\n\n更新本文\n"
-		if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("method = %q, want PATCH", r.Method)
+		}
+		resp := api.Post{
+			Number: 123,
+			Name:   "更新された記事",
+			URL:    "https://docs.esa.io/posts/123",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatal(err)
 		}
+	}))
 
-		cmd := NewRootCmd()
-		out := &bytes.Buffer{}
-		cmd.SetOut(out)
-		cmd.SetArgs([]string{"update", "docs", "123", "--file", inputFile})
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
 
-		if err := cmd.Execute(); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\ntitle: 更新された記事\n---\n\n更新本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
 
-		stdout := out.String()
-		if !strings.Contains(stdout, "Updated: #123") {
-			t.Errorf("stdout = %q, missing Updated", stdout)
-		}
-		if strings.Contains(stdout, "conflict") {
-			t.Errorf("stdout should not contain conflict message")
-		}
-	})
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"update", "docs", "123", "--file", inputFile})
 
-	t.Run("conflict detected", func(t *testing.T) {
-		server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			resp := api.Post{
-				Number:     123,
-				Name:       "更新された記事",
-				URL:        "https://docs.esa.io/posts/123",
-				OverLapped: true,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(resp); err != nil {
-				t.Fatal(err)
-			}
-		}))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-		t.Setenv("ESA_ACCESS_TOKEN", "test-token")
-		t.Setenv("ESA_API_BASE_URL", server)
-
-		inputFile := filepath.Join(t.TempDir(), "input.md")
-		content := "---\ntitle: 更新された記事\nrevision_number: 3\n---\n\n更新本文\n"
-		if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cmd := NewRootCmd()
-		out := &bytes.Buffer{}
-		cmd.SetOut(out)
-		cmd.SetArgs([]string{"update", "docs", "123", "--file", inputFile})
-
-		if err := cmd.Execute(); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		stdout := out.String()
-		if !strings.Contains(stdout, "conflict detected, merged by server") {
-			t.Errorf("stdout = %q, missing conflict message", stdout)
-		}
-	})
+	stdout := out.String()
+	if !strings.Contains(stdout, "Updated: #123") {
+		t.Errorf("stdout = %q, missing Updated", stdout)
+	}
 }
 
 func TestMissingToken(t *testing.T) {

@@ -10,14 +10,13 @@ import (
 )
 
 type Frontmatter struct {
-	Number         int      `yaml:"number,omitempty"`
-	Title          string   `yaml:"title"`
-	URL            string   `yaml:"url,omitempty"`
-	Category       string   `yaml:"category,omitempty"`
-	Tags           []string `yaml:"tags,omitempty"`
-	WIP            *bool    `yaml:"wip,omitempty"`
-	UpdatedAt      string   `yaml:"updated_at,omitempty"`
-	RevisionNumber int      `yaml:"revision_number,omitempty"`
+	Number    int      `yaml:"number,omitempty"`
+	Title     string   `yaml:"title"`
+	URL       string   `yaml:"url,omitempty"`
+	Category  string   `yaml:"category,omitempty"`
+	Tags      []string `yaml:"tags,omitempty"`
+	WIP       *bool    `yaml:"wip,omitempty"`
+	UpdatedAt string   `yaml:"updated_at,omitempty"`
 }
 
 type Document struct {

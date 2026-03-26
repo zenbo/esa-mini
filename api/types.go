@@ -12,17 +12,15 @@ type TeamsResponse struct {
 }
 
 type Post struct {
-	Number         int      `json:"number"`
-	Name           string   `json:"name"`
-	FullName       string   `json:"full_name"`
-	BodyMd         string   `json:"body_md"`
-	URL            string   `json:"url"`
-	WIP            bool     `json:"wip"`
-	Tags           []string `json:"tags"`
-	Category       string   `json:"category"`
-	UpdatedAt      string   `json:"updated_at"`
-	RevisionNumber int      `json:"revision_number"`
-	OverLapped     bool     `json:"overlapped"`
+	Number    int      `json:"number"`
+	Name      string   `json:"name"`
+	FullName  string   `json:"full_name"`
+	BodyMd    string   `json:"body_md"`
+	URL       string   `json:"url"`
+	WIP       bool     `json:"wip"`
+	Tags      []string `json:"tags"`
+	Category  string   `json:"category"`
+	UpdatedAt string   `json:"updated_at"`
 }
 
 type CreatePostRequest struct {
@@ -43,17 +41,12 @@ type PostBody struct {
 }
 
 type UpdatePostBody struct {
-	Name             string            `json:"name,omitempty"`
-	BodyMd           string            `json:"body_md,omitempty"`
-	Tags             []string          `json:"tags,omitempty"`
-	Category         string            `json:"category,omitempty"`
-	WIP              *bool             `json:"wip,omitempty"`
-	Message          string            `json:"message,omitempty"`
-	OriginalRevision *OriginalRevision `json:"original_revision,omitempty"`
-}
-
-type OriginalRevision struct {
-	Number int `json:"number"`
+	Name     string   `json:"name,omitempty"`
+	BodyMd   string   `json:"body_md,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Category string   `json:"category,omitempty"`
+	WIP      *bool    `json:"wip,omitempty"`
+	Message  string   `json:"message,omitempty"`
 }
 
 type APIError struct {

@@ -19,7 +19,6 @@ tags:
   - cli
 wip: false
 updated_at: "2025-07-01T12:00:00+09:00"
-revision_number: 5
 ---
 
 本文がここに続く
@@ -50,9 +49,6 @@ revision_number: 5
 		}
 		if fm.UpdatedAt != "2025-07-01T12:00:00+09:00" {
 			t.Errorf("UpdatedAt = %q", fm.UpdatedAt)
-		}
-		if fm.RevisionNumber != 5 {
-			t.Errorf("RevisionNumber = %d, want 5", fm.RevisionNumber)
 		}
 		if doc.Body != "本文がここに続く" {
 			t.Errorf("Body = %q, want %q", doc.Body, "本文がここに続く")
@@ -144,14 +140,13 @@ line3
 func TestFormat(t *testing.T) {
 	t.Run("full frontmatter", func(t *testing.T) {
 		fm := Frontmatter{
-			Number:         123,
-			Title:          "テスト記事",
-			URL:            "https://docs.esa.io/posts/123",
-			Category:       "dev/tips",
-			Tags:           []string{"go", "cli"},
-			WIP:            boolPtr(false),
-			UpdatedAt:      "2025-07-01T12:00:00+09:00",
-			RevisionNumber: 5,
+			Number:    123,
+			Title:     "テスト記事",
+			URL:       "https://docs.esa.io/posts/123",
+			Category:  "dev/tips",
+			Tags:      []string{"go", "cli"},
+			WIP:       boolPtr(false),
+			UpdatedAt: "2025-07-01T12:00:00+09:00",
 		}
 		result, err := Format(fm, "本文")
 		if err != nil {

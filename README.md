@@ -31,6 +31,9 @@ esa-mini teams
 # 記事を取得してファイルに保存
 esa-mini get myteam 123 --output ./posts/123.md
 
+# ディレクトリを指定すると {number}.md で自動命名
+esa-mini get myteam 123 --output ./posts/
+
 # ファイルから新規記事を作成
 esa-mini create myteam --file ./posts/new.md
 

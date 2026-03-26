@@ -23,7 +23,7 @@ go install github.com/zenbo/esa-mini@latest
 ## コマンド概要
 
 - `esa-mini teams` — 所属チーム一覧を表示
-- `esa-mini get <team> <number> --output <path>` — 記事を frontmatter 付き Markdown として保存
+- `esa-mini get <team> <number> --output <path>` — 記事を frontmatter 付き Markdown として保存（ディレクトリ指定時は `{number}.md` で自動命名）
 - `esa-mini create <team> --file <path>` — ファイルから新規記事を作成
 - `esa-mini update <team> <number> --file <path>` — ファイルから既存記事を更新
 

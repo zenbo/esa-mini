@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -55,16 +56,27 @@ func newGetCmd() *cobra.Command {
 				return nil
 			}
 
-			if err := os.WriteFile(output, []byte(content), 0644); err != nil {
+			// ディレクトリ指定時は {number}.md で自動命名
+			outPath := output
+			if info, statErr := os.Stat(output); statErr == nil && info.IsDir() {
+				outPath = filepath.Join(output, fmt.Sprintf("%d.md", post.Number))
+			} else if output[len(output)-1] == filepath.Separator || output[len(output)-1] == '/' {
+				if mkErr := os.MkdirAll(output, 0755); mkErr != nil {
+					return cliError("esa-mini get", mkErr.Error(), "Check the output directory is writable.")
+				}
+				outPath = filepath.Join(output, fmt.Sprintf("%d.md", post.Number))
+			}
+
+			if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
 				return cliError("esa-mini get", err.Error(), "Check the output path is writable.")
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\nTitle: %s\nURL:   %s\n", output, post.Name, post.URL)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\nTitle: %s\nURL:   %s\n", outPath, post.Name, post.URL)
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&output, "output", "", "Output file path (required, use - for stdout)")
+	cmd.Flags().StringVar(&output, "output", "", "Output file path, directory, or - for stdout")
 	_ = cmd.MarkFlagRequired("output")
 
 	return cmd

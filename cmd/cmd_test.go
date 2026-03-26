@@ -107,6 +107,49 @@ func TestGetCmd(t *testing.T) {
 		}
 	})
 
+	t.Run("save to directory", func(t *testing.T) {
+		dir := t.TempDir()
+		cmd := NewRootCmd()
+		out := &bytes.Buffer{}
+		cmd.SetOut(out)
+		cmd.SetArgs([]string{"get", "docs", "123", "--output", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		expectedFile := filepath.Join(dir, "123.md")
+		stdout := out.String()
+		if !strings.Contains(stdout, "Saved: "+expectedFile) {
+			t.Errorf("stdout = %q, missing Saved with auto-named path", stdout)
+		}
+
+		content, err := os.ReadFile(expectedFile)
+		if err != nil {
+			t.Fatalf("failed to read output file: %v", err)
+		}
+		if !strings.Contains(string(content), "title: テスト記事") {
+			t.Errorf("file content missing title frontmatter")
+		}
+	})
+
+	t.Run("save to directory with trailing slash", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "subdir") + "/"
+		cmd := NewRootCmd()
+		out := &bytes.Buffer{}
+		cmd.SetOut(out)
+		cmd.SetArgs([]string{"get", "docs", "123", "--output", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		expectedFile := filepath.Join(dir, "123.md")
+		if _, err := os.Stat(expectedFile); err != nil {
+			t.Fatalf("expected file %s to exist: %v", expectedFile, err)
+		}
+	})
+
 	t.Run("output to stdout", func(t *testing.T) {
 		cmd := NewRootCmd()
 		out := &bytes.Buffer{}

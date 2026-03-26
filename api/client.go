@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	tkn "github.com/zenbo/esa-mini/token"
 )
 
 const defaultBaseURL = "https://api.esa.io"
@@ -18,16 +20,19 @@ type Client struct {
 }
 
 func NewClient() (*Client, error) {
-	token := os.Getenv("ESA_ACCESS_TOKEN")
-	if token == "" {
-		return nil, fmt.Errorf("ESA_ACCESS_TOKEN is not set")
+	tok, err := tkn.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve token: %w", err)
+	}
+	if tok == "" {
+		return nil, fmt.Errorf("no access token found")
 	}
 	base := os.Getenv("ESA_API_BASE_URL")
 	if base == "" {
 		base = defaultBaseURL
 	}
 	return &Client{
-		token:      token,
+		token:      tok,
 		httpClient: &http.Client{},
 		baseURL:    base,
 	}, nil

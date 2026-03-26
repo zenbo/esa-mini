@@ -583,6 +583,7 @@ func TestUpdateCmdNumberMissing(t *testing.T) {
 
 func TestMissingToken(t *testing.T) {
 	t.Setenv("ESA_ACCESS_TOKEN", "")
+	t.Setenv("HOME", t.TempDir())
 
 	cmd := NewRootCmd()
 	errOut := &bytes.Buffer{}
@@ -593,7 +594,88 @@ func TestMissingToken(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing token")
 	}
-	if !strings.Contains(err.Error(), "ESA_ACCESS_TOKEN") {
-		t.Errorf("error = %q, should mention ESA_ACCESS_TOKEN", err.Error())
+	if !strings.Contains(err.Error(), "no access token found") {
+		t.Errorf("error = %q, should mention no access token found", err.Error())
+	}
+}
+
+func TestTokenSetAndShow(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	// set
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetIn(strings.NewReader("my-secret-token\n"))
+	cmd.SetArgs([]string{"token", "set"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("token set failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Token saved.") {
+		t.Errorf("stdout = %q, missing 'Token saved.'", out.String())
+	}
+
+	// show
+	cmd = NewRootCmd()
+	out = &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"token", "show"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("token show failed: %v", err)
+	}
+	shown := strings.TrimSpace(out.String())
+	if strings.Contains(shown, "my-secret-token") {
+		t.Errorf("token show should mask the token, got %q", shown)
+	}
+	if !strings.HasPrefix(shown, "my-s") {
+		t.Errorf("token show should show first 4 chars, got %q", shown)
+	}
+}
+
+func TestTokenDelete(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	// set first
+	cmd := NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetIn(strings.NewReader("disposable-token\n"))
+	cmd.SetArgs([]string{"token", "set"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("token set failed: %v", err)
+	}
+
+	// delete
+	cmd = NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"token", "delete"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("token delete failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Token deleted.") {
+		t.Errorf("stdout = %q, missing 'Token deleted.'", out.String())
+	}
+
+	// show should fail
+	cmd = NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"token", "show"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("expected error for show after delete")
+	}
+}
+
+func TestTokenDeleteNoToken(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	cmd := NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"token", "delete"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for deleting non-existent token")
 	}
 }

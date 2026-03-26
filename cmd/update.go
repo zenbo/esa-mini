@@ -82,7 +82,7 @@ CLI arguments override frontmatter values.`,
 
 			client, err := api.NewClient()
 			if err != nil {
-				return cliError("esa-mini update", err.Error(), "Set a valid token in ESA_ACCESS_TOKEN.")
+				return cliError("esa-mini update", err.Error(), "Run 'esa-mini token set' or set ESA_ACCESS_TOKEN.")
 			}
 
 			post, err := client.UpdatePost(team, number, body)

@@ -5,7 +5,7 @@ description: >
   記事本文をファイルに保存し、コンテキストウィンドウの消費を抑える。
   使うタイミング: (1) esa の記事を読みたい・取得したい,
   (2) esa に記事を投稿・更新したい, (3) esa のチーム一覧を確認したい。
-  環境変数 ESA_ACCESS_TOKEN が必要。
+  `esa-mini token set` でトークンを保存するか、環境変数 ESA_ACCESS_TOKEN を設定する。
 ---
 
 # esa-mini
@@ -22,6 +22,9 @@ go install github.com/zenbo/esa-mini@latest
 
 ## コマンド概要
 
+- `esa-mini token set` — アクセストークンを `~/.config/esa-mini/token` に保存
+- `esa-mini token show` — 保存済みトークンを確認（マスク表示）
+- `esa-mini token delete` — 保存済みトークンを削除
 - `esa-mini teams` — 所属チーム一覧を表示
 - `esa-mini get <team> <number> --output <path>` — 記事を frontmatter 付き Markdown として保存（ディレクトリ指定時は `{number}.md` で自動命名）
 - `esa-mini create [team] --file <path>` — ファイルから新規記事を作成（team 省略時は frontmatter から取得）

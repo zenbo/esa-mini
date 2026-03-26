@@ -21,13 +21,14 @@ func newTestClient(t *testing.T, handler http.Handler) *Client {
 func TestNewClient(t *testing.T) {
 	t.Run("missing token", func(t *testing.T) {
 		t.Setenv("ESA_ACCESS_TOKEN", "")
+		t.Setenv("HOME", t.TempDir())
 		_, err := NewClient()
 		if err == nil {
 			t.Fatal("expected error for missing token")
 		}
 	})
 
-	t.Run("valid token", func(t *testing.T) {
+	t.Run("valid token from env", func(t *testing.T) {
 		t.Setenv("ESA_ACCESS_TOKEN", "my-token")
 		c, err := NewClient()
 		if err != nil {

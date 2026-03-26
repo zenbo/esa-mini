@@ -14,7 +14,7 @@ func newTeamsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := api.NewClient()
 			if err != nil {
-				return cliError("esa-mini teams", err.Error(), "Set a valid token in ESA_ACCESS_TOKEN.")
+				return cliError("esa-mini teams", err.Error(), "Run 'esa-mini token set' or set ESA_ACCESS_TOKEN.")
 			}
 			teams, err := client.GetTeams()
 			if err != nil {

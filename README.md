@@ -46,6 +46,21 @@ export ESA_ACCESS_TOKEN='your-token-here'
 # 所属チーム一覧
 esa-mini teams
 
+# カテゴリ一覧
+esa-mini categories myteam
+
+# トップレベルカテゴリのみ
+esa-mini categories myteam --top
+
+# カテゴリを部分一致で探す
+esa-mini categories myteam --match "設計"
+
+# タグ一覧
+esa-mini tags myteam
+
+# タグを絞り込み
+esa-mini tags myteam --match "go"
+
 # 記事を検索して一覧表示
 esa-mini search myteam --category "dev/tips"
 

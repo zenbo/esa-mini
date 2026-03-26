@@ -83,3 +83,50 @@ type APIError struct {
 func (e *APIError) Error() string {
 	return e.Status
 }
+
+// GET /v1/teams/:team_name/categories/paths
+type CategoryPath struct {
+	Path  *string `json:"path"` // null = 未分類
+	Posts int     `json:"posts"`
+}
+
+type CategoriesPathsResponse struct {
+	Categories []CategoryPath `json:"categories"`
+	TotalCount int            `json:"total_count"`
+	Page       int            `json:"page"`
+	PerPage    int            `json:"per_page"`
+	PrevPage   *int           `json:"prev_page"`
+	NextPage   *int           `json:"next_page"`
+}
+
+// GET /v1/teams/:team_name/categories/top
+type TopCategory struct {
+	Name     string `json:"name"`
+	FullName string `json:"full_name"`
+	Count    int    `json:"count"`
+	HasChild bool   `json:"has_child"`
+}
+
+type CategoriesTopResponse struct {
+	Categories []TopCategory `json:"categories"`
+	TotalCount int           `json:"total_count"`
+	Page       int           `json:"page"`
+	PerPage    int           `json:"per_page"`
+	PrevPage   *int          `json:"prev_page"`
+	NextPage   *int          `json:"next_page"`
+}
+
+// GET /v1/teams/:team_name/tags
+type Tag struct {
+	Name       string `json:"name"`
+	PostsCount int    `json:"posts_count"`
+}
+
+type TagsResponse struct {
+	Tags       []Tag `json:"tags"`
+	TotalCount int   `json:"total_count"`
+	Page       int   `json:"page"`
+	PerPage    int   `json:"per_page"`
+	PrevPage   *int  `json:"prev_page"`
+	NextPage   *int  `json:"next_page"`
+}

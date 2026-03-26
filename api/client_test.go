@@ -284,6 +284,142 @@ func TestGetUser(t *testing.T) {
 	}
 }
 
+func TestGetCategoriesPaths(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/teams/docs/categories/paths" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		q := r.URL.Query()
+		if q.Get("v") != "2" {
+			t.Errorf("v = %q, want 2", q.Get("v"))
+		}
+		if q.Get("per_page") != "100" {
+			t.Errorf("per_page = %q, want 100", q.Get("per_page"))
+		}
+		if q.Get("prefix") != "dev/" {
+			t.Errorf("prefix = %q, want dev/", q.Get("prefix"))
+		}
+
+		resp := CategoriesPathsResponse{
+			Categories: []CategoryPath{
+				{Path: strPtr("dev/tips"), Posts: 12},
+				{Path: strPtr("dev/設計"), Posts: 5},
+				{Path: nil, Posts: 3},
+			},
+			TotalCount: 3,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	client := newTestClient(t, handler)
+	resp, err := client.GetCategoriesPaths("docs", 1, 100, "dev/", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.TotalCount != 3 {
+		t.Errorf("TotalCount = %d, want 3", resp.TotalCount)
+	}
+	if len(resp.Categories) != 3 {
+		t.Fatalf("len(Categories) = %d, want 3", len(resp.Categories))
+	}
+	if resp.Categories[0].Path == nil || *resp.Categories[0].Path != "dev/tips" {
+		t.Errorf("Categories[0].Path = %v", resp.Categories[0].Path)
+	}
+	if resp.Categories[2].Path != nil {
+		t.Errorf("Categories[2].Path = %v, want nil", resp.Categories[2].Path)
+	}
+}
+
+func TestGetCategoriesTop(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/teams/docs/categories/top" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+
+		resp := CategoriesTopResponse{
+			Categories: []TopCategory{
+				{Name: "dev", FullName: "dev", Count: 15, HasChild: true},
+				{Name: "日報", FullName: "日報", Count: 8, HasChild: false},
+			},
+			TotalCount: 2,
+			Page:       1,
+			PerPage:    20,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	client := newTestClient(t, handler)
+	resp, err := client.GetCategoriesTop("docs")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Categories) != 2 {
+		t.Fatalf("len(Categories) = %d, want 2", len(resp.Categories))
+	}
+	if resp.Categories[0].FullName != "dev" {
+		t.Errorf("Categories[0].FullName = %q", resp.Categories[0].FullName)
+	}
+	if !resp.Categories[0].HasChild {
+		t.Errorf("Categories[0].HasChild = false, want true")
+	}
+	if resp.Categories[1].HasChild {
+		t.Errorf("Categories[1].HasChild = true, want false")
+	}
+}
+
+func TestGetTags(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/teams/docs/tags" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		q := r.URL.Query()
+		if q.Get("per_page") != "100" {
+			t.Errorf("per_page = %q, want 100", q.Get("per_page"))
+		}
+
+		resp := TagsResponse{
+			Tags: []Tag{
+				{Name: "go", PostsCount: 45},
+				{Name: "React", PostsCount: 38},
+			},
+			TotalCount: 2,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	client := newTestClient(t, handler)
+	resp, err := client.GetTags("docs", 1, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Tags) != 2 {
+		t.Fatalf("len(Tags) = %d, want 2", len(resp.Tags))
+	}
+	if resp.Tags[0].Name != "go" {
+		t.Errorf("Tags[0].Name = %q", resp.Tags[0].Name)
+	}
+	if resp.Tags[0].PostsCount != 45 {
+		t.Errorf("Tags[0].PostsCount = %d", resp.Tags[0].PostsCount)
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
 func TestAPIError(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

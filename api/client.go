@@ -147,6 +147,53 @@ func (c *Client) GetUser() (*User, error) {
 	return &user, nil
 }
 
+func (c *Client) GetCategoriesPaths(team string, page, perPage int, prefix, match string) (*CategoriesPathsResponse, error) {
+	path := fmt.Sprintf("/v1/teams/%s/categories/paths?v=2&per_page=%d&page=%d",
+		team, perPage, page)
+	if prefix != "" {
+		path += "&prefix=" + url.QueryEscape(prefix)
+	}
+	if match != "" {
+		path += "&match=" + url.QueryEscape(match)
+	}
+	data, err := c.do("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp CategoriesPathsResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Client) GetCategoriesTop(team string) (*CategoriesTopResponse, error) {
+	path := fmt.Sprintf("/v1/teams/%s/categories/top", team)
+	data, err := c.do("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp CategoriesTopResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Client) GetTags(team string, page, perPage int) (*TagsResponse, error) {
+	path := fmt.Sprintf("/v1/teams/%s/tags?per_page=%d&page=%d",
+		team, perPage, page)
+	data, err := c.do("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp TagsResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) UpdatePost(team string, number int, body UpdatePostBody) (*Post, error) {
 	reqBody := UpdatePostRequest{Post: body}
 	jsonData, err := json.Marshal(reqBody)

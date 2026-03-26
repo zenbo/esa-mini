@@ -667,6 +667,198 @@ func TestTokenDelete(t *testing.T) {
 	}
 }
 
+func TestCategoriesCmd(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.CategoriesPathsResponse{
+			Categories: []api.CategoryPath{
+				{Path: strPtr("dev/tips"), Posts: 12},
+				{Path: strPtr("日報"), Posts: 1523},
+				{Path: nil, Posts: 5},
+			},
+			TotalCount: 120,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"categories", "docs"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "dev/tips") {
+		t.Errorf("output missing dev/tips: %q", output)
+	}
+	if !strings.Contains(output, "1523 posts") {
+		t.Errorf("output missing 1523 posts: %q", output)
+	}
+	if !strings.Contains(output, "(uncategorized)") {
+		t.Errorf("output missing (uncategorized): %q", output)
+	}
+	if !strings.Contains(output, "-- 3 categories (total 120) --") {
+		t.Errorf("output missing summary: %q", output)
+	}
+}
+
+func TestCategoriesCmdTop(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/categories/top") {
+			t.Errorf("path = %q, want /categories/top", r.URL.Path)
+		}
+		resp := api.CategoriesTopResponse{
+			Categories: []api.TopCategory{
+				{Name: "dev", FullName: "dev", Count: 15, HasChild: true},
+				{Name: "日報", FullName: "日報", Count: 8, HasChild: false},
+			},
+			TotalCount: 2,
+			Page:       1,
+			PerPage:    20,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"categories", "docs", "--top"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "dev") {
+		t.Errorf("output missing dev: %q", output)
+	}
+	if !strings.Contains(output, "[+]") {
+		t.Errorf("output missing [+] indicator: %q", output)
+	}
+	if !strings.Contains(output, "-- 2 categories --") {
+		t.Errorf("output missing summary: %q", output)
+	}
+}
+
+func TestCategoriesCmdTopWithFilter(t *testing.T) {
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{"categories", "docs", "--top", "--prefix", "dev/"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for --top with --prefix")
+	}
+	if !strings.Contains(err.Error(), "--top cannot be used with --prefix or --match") {
+		t.Errorf("error = %q", err.Error())
+	}
+}
+
+func TestTagsCmd(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.TagsResponse{
+			Tags: []api.Tag{
+				{Name: "go", PostsCount: 45},
+				{Name: "React", PostsCount: 38},
+				{Name: "設計", PostsCount: 23},
+			},
+			TotalCount: 150,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"tags", "docs"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "go") {
+		t.Errorf("output missing go: %q", output)
+	}
+	if !strings.Contains(output, "45 posts") {
+		t.Errorf("output missing 45 posts: %q", output)
+	}
+	if !strings.Contains(output, "-- 3 tags (total 150) --") {
+		t.Errorf("output missing summary: %q", output)
+	}
+}
+
+func TestTagsCmdMatch(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.TagsResponse{
+			Tags: []api.Tag{
+				{Name: "go", PostsCount: 45},
+				{Name: "React", PostsCount: 38},
+				{Name: "設計", PostsCount: 23},
+			},
+			TotalCount: 150,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"tags", "docs", "--match", "react"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "React") {
+		t.Errorf("output missing React: %q", output)
+	}
+	if strings.Contains(output, "go") && !strings.Contains(output, "-- 1 tags") {
+		t.Errorf("output should only contain React: %q", output)
+	}
+	if !strings.Contains(output, "-- 1 tags (total 150) --") {
+		t.Errorf("output missing summary: %q", output)
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
 func TestTokenDeleteNoToken(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 

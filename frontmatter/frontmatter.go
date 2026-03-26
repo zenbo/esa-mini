@@ -10,6 +10,7 @@ import (
 )
 
 type Frontmatter struct {
+	Team      string   `yaml:"team,omitempty"`
 	Number    int      `yaml:"number,omitempty"`
 	Title     string   `yaml:"title"`
 	URL       string   `yaml:"url,omitempty"`

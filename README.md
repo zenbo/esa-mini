@@ -39,12 +39,18 @@ esa-mini create myteam --file ./posts/new.md
 
 # ファイルから既存記事を更新
 esa-mini update myteam 123 --file ./posts/123.md
+
+# frontmatter に team / number があれば引数を省略できる
+esa-mini create --file ./posts/new.md
+esa-mini update --file ./posts/123.md
 ```
 
-記事ファイルは YAML frontmatter 付き Markdown 形式:
+記事ファイルは YAML frontmatter 付き Markdown 形式（`get` で取得したファイルにはすべてのフィールドが含まれる）:
 
 ```markdown
 ---
+team: myteam
+number: 123
 title: 記事タイトル
 category: dev/tips
 tags:

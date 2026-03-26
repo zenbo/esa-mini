@@ -21,19 +21,35 @@ func newUpdateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "update <team> <number>",
+		Use:   "update [team] [number]",
 		Short: "Update an existing post from a frontmatter Markdown file",
-		Args:  cobra.ExactArgs(2),
+		Long: `Update an existing post from a frontmatter Markdown file.
+Team and number can be omitted if the frontmatter contains 'team' and 'number' fields.
+CLI arguments override frontmatter values.`,
+		Args: cobra.RangeArgs(0, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			team := args[0]
-			number, err := strconv.Atoi(args[1])
-			if err != nil {
-				return cliError("esa-mini update", fmt.Sprintf("invalid post number: %s", args[1]), "Post number must be an integer.")
-			}
-
 			doc, err := readDocument(file)
 			if err != nil {
 				return cliError("esa-mini update", err.Error(), "Check the file path and format.")
+			}
+
+			// CLI args > frontmatter
+			team := doc.Frontmatter.Team
+			number := doc.Frontmatter.Number
+			if len(args) >= 1 {
+				team = args[0]
+			}
+			if len(args) >= 2 {
+				number, err = strconv.Atoi(args[1])
+				if err != nil {
+					return cliError("esa-mini update", fmt.Sprintf("invalid post number: %s", args[1]), "Post number must be an integer.")
+				}
+			}
+			if team == "" {
+				return cliError("esa-mini update", "team is required", "Specify as argument or set 'team' in frontmatter.")
+			}
+			if number == 0 {
+				return cliError("esa-mini update", "post number is required", "Specify as argument or set 'number' in frontmatter.")
 			}
 
 			body := api.UpdatePostBody{

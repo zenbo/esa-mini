@@ -342,6 +342,245 @@ func TestUpdateCmd(t *testing.T) {
 	}
 }
 
+func TestGetCmdWritesTeamToFrontmatter(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		post := api.Post{
+			Number:    123,
+			Name:      "テスト記事",
+			BodyMd:    "# Hello",
+			URL:       "https://docs.esa.io/posts/123",
+			WIP:       false,
+			Tags:      []string{"go"},
+			Category:  "dev/tips",
+			UpdatedAt: "2025-07-01T12:00:00+09:00",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(post); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	outFile := filepath.Join(t.TempDir(), "test.md")
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"get", "docs", "123", "--output", outFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	content, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatalf("failed to read output file: %v", err)
+	}
+	if !strings.Contains(string(content), "team: docs") {
+		t.Errorf("file content missing team frontmatter, got:\n%s", string(content))
+	}
+}
+
+func TestCreateCmdTeamFromFrontmatter(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		resp := api.Post{
+			Number:    456,
+			Name:      "新しい記事",
+			URL:       "https://docs.esa.io/posts/456",
+			BodyMd:    "本文",
+			WIP:       true,
+			UpdatedAt: "2025-01-01T00:00:00+09:00",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\nteam: docs\ntitle: 新しい記事\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"create", "--file", inputFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stdout := out.String()
+	if !strings.Contains(stdout, "Created: #456") {
+		t.Errorf("stdout = %q, missing Created: #456", stdout)
+	}
+}
+
+func TestCreateCmdTeamMissing(t *testing.T) {
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\ntitle: チームなし\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+
+	cmd := NewRootCmd()
+	errOut := &bytes.Buffer{}
+	cmd.SetErr(errOut)
+	cmd.SetArgs([]string{"create", "--file", inputFile})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for missing team")
+	}
+	if !strings.Contains(err.Error(), "team is required") {
+		t.Errorf("error = %q, should mention team", err.Error())
+	}
+}
+
+func TestUpdateCmdAllFromFrontmatter(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		if !strings.HasSuffix(r.URL.Path, "/posts/789") {
+			t.Errorf("path = %q, want suffix /posts/789", r.URL.Path)
+		}
+		resp := api.Post{
+			Number: 789,
+			Name:   "全frontmatterテスト",
+			URL:    "https://docs.esa.io/posts/789",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\nteam: docs\nnumber: 789\ntitle: 全frontmatterテスト\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"update", "--file", inputFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stdout := out.String()
+	if !strings.Contains(stdout, "Updated: #789") {
+		t.Errorf("stdout = %q, missing Updated: #789", stdout)
+	}
+}
+
+func TestUpdateCmdTeamMissing(t *testing.T) {
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\nnumber: 123\ntitle: チームなし\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+
+	cmd := NewRootCmd()
+	errOut := &bytes.Buffer{}
+	cmd.SetErr(errOut)
+	cmd.SetArgs([]string{"update", "--file", inputFile})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for missing team")
+	}
+	if !strings.Contains(err.Error(), "team is required") {
+		t.Errorf("error = %q, should mention team", err.Error())
+	}
+}
+
+func TestUpdateCmdNumberFromFrontmatter(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch {
+			t.Errorf("method = %q, want PATCH", r.Method)
+		}
+		if !strings.HasSuffix(r.URL.Path, "/posts/456") {
+			t.Errorf("path = %q, want suffix /posts/456", r.URL.Path)
+		}
+		resp := api.Post{
+			Number: 456,
+			Name:   "frontmatter番号テスト",
+			URL:    "https://docs.esa.io/posts/456",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\nnumber: 456\ntitle: frontmatter番号テスト\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"update", "docs", "--file", inputFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stdout := out.String()
+	if !strings.Contains(stdout, "Updated: #456") {
+		t.Errorf("stdout = %q, missing Updated: #456", stdout)
+	}
+}
+
+func TestUpdateCmdNumberMissing(t *testing.T) {
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\ntitle: 番号なし\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+
+	cmd := NewRootCmd()
+	errOut := &bytes.Buffer{}
+	cmd.SetErr(errOut)
+	cmd.SetArgs([]string{"update", "docs", "--file", inputFile})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for missing number")
+	}
+	if !strings.Contains(err.Error(), "post number is required") {
+		t.Errorf("error = %q, should mention post number", err.Error())
+	}
+}
+
 func TestMissingToken(t *testing.T) {
 	t.Setenv("ESA_ACCESS_TOKEN", "")
 

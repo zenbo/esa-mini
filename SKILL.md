@@ -24,8 +24,8 @@ go install github.com/zenbo/esa-mini@latest
 
 - `esa-mini teams` — 所属チーム一覧を表示
 - `esa-mini get <team> <number> --output <path>` — 記事を frontmatter 付き Markdown として保存（ディレクトリ指定時は `{number}.md` で自動命名）
-- `esa-mini create <team> --file <path>` — ファイルから新規記事を作成
-- `esa-mini update <team> <number> --file <path>` — ファイルから既存記事を更新
+- `esa-mini create [team] --file <path>` — ファイルから新規記事を作成（team 省略時は frontmatter から取得）
+- `esa-mini update [team] [number] --file <path>` — ファイルから既存記事を更新（team / number 省略時は frontmatter から取得）
 
 ## 記事ファイルのフォーマット
 
@@ -33,6 +33,8 @@ create / update に渡す Markdown ファイルは以下の形式で作成する
 
 ```markdown
 ---
+team: myteam
+number: 123
 title: 記事タイトル
 category: dev/tips
 tags:
@@ -43,3 +45,5 @@ wip: true
 
 本文をここに書く
 ```
+
+`get` で取得したファイルにはすべてのフィールドが含まれる。`create` / `update` では frontmatter の `team` / `number` を使うため CLI 引数での指定は省略可能。

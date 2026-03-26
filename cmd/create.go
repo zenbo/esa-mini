@@ -21,12 +21,14 @@ func newCreateCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create <team>",
+		Use:   "create [team]",
 		Short: "Create a new post from a frontmatter Markdown file",
 		Long: `Create a new post from a frontmatter Markdown file.
+Team can be omitted if the frontmatter contains a 'team' field.
 
 File format:
   ---
+  team: myteam
   title: Post title
   category: dev/tips
   tags:
@@ -36,13 +38,20 @@ File format:
   ---
 
   Post body here`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			team := args[0]
-
 			doc, err := readDocument(file)
 			if err != nil {
 				return cliError("esa-mini create", err.Error(), "Check the file path and format.")
+			}
+
+			// CLI arg > frontmatter
+			team := doc.Frontmatter.Team
+			if len(args) >= 1 {
+				team = args[0]
+			}
+			if team == "" {
+				return cliError("esa-mini create", "team is required", "Specify as argument or set 'team' in frontmatter.")
 			}
 
 			body := api.PostBody{
@@ -90,6 +99,7 @@ File format:
 			// Write back frontmatter with full post metadata
 			wip := post.WIP
 			fm := frontmatter.Frontmatter{
+				Team:      team,
 				Number:    post.Number,
 				Title:     post.Name,
 				URL:       post.URL,

@@ -37,6 +37,7 @@ func newGetCmd() *cobra.Command {
 
 			wip := post.WIP
 			fm := frontmatter.Frontmatter{
+				Team:      team,
 				Number:    post.Number,
 				Title:     post.Name,
 				URL:       post.URL,

@@ -47,7 +47,7 @@ File format:
 
 			body := api.PostBody{
 				Name:   doc.Frontmatter.Title,
-				BodyMd: doc.Body,
+				BodyMd: frontmatter.NormalizeCRLF(doc.Body),
 				Tags:   doc.Frontmatter.Tags,
 			}
 			if doc.Frontmatter.Category != "" {

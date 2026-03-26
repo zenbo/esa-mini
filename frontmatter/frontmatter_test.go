@@ -135,6 +135,58 @@ line3
 			t.Errorf("Body = %q", doc.Body)
 		}
 	})
+
+	t.Run("CRLF body normalized to LF", func(t *testing.T) {
+		input := "---\r\ntitle: crlf\r\n---\r\n\r\nline1\r\nline2\r\n"
+		doc, err := Parse(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if doc.Frontmatter.Title != "crlf" {
+			t.Errorf("Title = %q, want %q", doc.Frontmatter.Title, "crlf")
+		}
+		if doc.Body != "line1\nline2" {
+			t.Errorf("Body = %q, want %q", doc.Body, "line1\nline2")
+		}
+	})
+}
+
+func TestNormalizeLF(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"LF unchanged", "a\nb\nc", "a\nb\nc"},
+		{"CRLF to LF", "a\r\nb\r\nc", "a\nb\nc"},
+		{"mixed to LF", "a\r\nb\nc\r\n", "a\nb\nc\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeLF(tt.input); got != tt.want {
+				t.Errorf("NormalizeLF() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeCRLF(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"LF to CRLF", "a\nb\nc", "a\r\nb\r\nc"},
+		{"CRLF unchanged", "a\r\nb\r\nc", "a\r\nb\r\nc"},
+		{"mixed normalized", "a\r\nb\nc", "a\r\nb\r\nc"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeCRLF(tt.input); got != tt.want {
+				t.Errorf("NormalizeCRLF() = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }
 
 func TestFormat(t *testing.T) {
@@ -205,6 +257,20 @@ func TestFormat(t *testing.T) {
 		}
 		if !strings.HasSuffix(result, "no trailing newline\n") {
 			t.Error("should add trailing newline")
+		}
+	})
+
+	t.Run("CRLF body normalized in Format", func(t *testing.T) {
+		fm := Frontmatter{Title: "test"}
+		result, err := Format(fm, "line1\r\nline2\r\nline3")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if strings.Contains(result, "\r\n") {
+			t.Errorf("result should not contain CRLF: %q", result)
+		}
+		if !strings.Contains(result, "line1\nline2\nline3") {
+			t.Errorf("result should contain LF-normalized body: %q", result)
 		}
 	})
 

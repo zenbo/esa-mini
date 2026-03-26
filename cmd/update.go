@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zenbo/esa-mini/api"
+	"github.com/zenbo/esa-mini/frontmatter"
 )
 
 func newUpdateCmd() *cobra.Command {
@@ -37,7 +38,7 @@ func newUpdateCmd() *cobra.Command {
 
 			body := api.UpdatePostBody{
 				Name:   doc.Frontmatter.Title,
-				BodyMd: doc.Body,
+				BodyMd: frontmatter.NormalizeCRLF(doc.Body),
 				Tags:   doc.Frontmatter.Tags,
 			}
 			if doc.Frontmatter.Category != "" {

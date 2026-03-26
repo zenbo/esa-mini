@@ -71,7 +71,22 @@ func Parse(r io.Reader) (*Document, error) {
 	}, nil
 }
 
+// NormalizeLF は \r\n を \n に統一する。
+// ファイル保存時に使用し、ローカルの改行コードを LF に揃える。
+func NormalizeLF(s string) string {
+	return strings.ReplaceAll(s, "\r\n", "\n")
+}
+
+// NormalizeCRLF は \n を \r\n に統一する。
+// esa API への送信時に使用し、WebUI でのコピペ時に改行が保持されるようにする。
+func NormalizeCRLF(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.ReplaceAll(s, "\n", "\r\n")
+}
+
 func Format(fm Frontmatter, body string) (string, error) {
+	body = NormalizeLF(body)
+
 	var buf strings.Builder
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)

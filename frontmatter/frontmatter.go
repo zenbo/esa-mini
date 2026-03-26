@@ -72,14 +72,20 @@ func Parse(r io.Reader) (*Document, error) {
 }
 
 func Format(fm Frontmatter, body string) (string, error) {
-	yamlBytes, err := yaml.Marshal(fm)
-	if err != nil {
+	var buf strings.Builder
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(fm); err != nil {
 		return "", err
 	}
+	if err := enc.Close(); err != nil {
+		return "", err
+	}
+	yamlStr := buf.String()
 
 	var sb strings.Builder
 	sb.WriteString("---\n")
-	sb.Write(yamlBytes)
+	sb.WriteString(yamlStr)
 	sb.WriteString("---\n\n")
 	sb.WriteString(body)
 	// Ensure trailing newline

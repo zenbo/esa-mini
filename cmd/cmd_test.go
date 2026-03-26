@@ -142,9 +142,14 @@ func TestCreateCmd(t *testing.T) {
 		}
 
 		resp := api.Post{
-			Number: 456,
-			Name:   "新しい記事",
-			URL:    "https://docs.esa.io/posts/456",
+			Number:    456,
+			Name:      "新しい記事",
+			URL:       "https://docs.esa.io/posts/456",
+			BodyMd:    "本文",
+			Category:  "dev/tips",
+			Tags:      []string{"go"},
+			WIP:       true,
+			UpdatedAt: "2025-01-01T00:00:00+09:00",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -178,6 +183,22 @@ func TestCreateCmd(t *testing.T) {
 	if !strings.Contains(stdout, "Title:   新しい記事") {
 		t.Errorf("stdout = %q, missing Title", stdout)
 	}
+
+	// Verify frontmatter was written back to the file
+	updated, err := os.ReadFile(inputFile)
+	if err != nil {
+		t.Fatalf("failed to read updated file: %v", err)
+	}
+	updatedStr := string(updated)
+	if !strings.Contains(updatedStr, "number: 456") {
+		t.Errorf("updated file missing number, got:\n%s", updatedStr)
+	}
+	if !strings.Contains(updatedStr, "url: https://docs.esa.io/posts/456") {
+		t.Errorf("updated file missing url, got:\n%s", updatedStr)
+	}
+	if !strings.Contains(updatedStr, "updated_at:") {
+		t.Errorf("updated file missing updated_at, got:\n%s", updatedStr)
+	}
 }
 
 func TestCreateCmdCLIOverrides(t *testing.T) {
@@ -187,7 +208,7 @@ func TestCreateCmdCLIOverrides(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&receivedReq); err != nil {
 			t.Fatalf("failed to decode: %v", err)
 		}
-		resp := api.Post{Number: 456, Name: receivedReq.Post.Name, URL: "https://docs.esa.io/posts/456"}
+		resp := api.Post{Number: 456, Name: receivedReq.Post.Name, URL: "https://docs.esa.io/posts/456", BodyMd: "本文", UpdatedAt: "2025-01-01T00:00:00+09:00"}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {

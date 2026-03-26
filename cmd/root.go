@@ -32,6 +32,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(newCreateCmd())
 	cmd.AddCommand(newUpdateCmd())
 	cmd.AddCommand(newTokenCmd())
+	cmd.AddCommand(newSearchCmd())
 
 	return cmd
 }

@@ -49,6 +49,31 @@ type UpdatePostBody struct {
 	Message  string   `json:"message,omitempty"`
 }
 
+type PostsResponse struct {
+	Posts      []Post `json:"posts"`
+	PrevPage   *int   `json:"prev_page"`
+	NextPage   *int   `json:"next_page"`
+	TotalCount int    `json:"total_count"`
+	Page       int    `json:"page"`
+	PerPage    int    `json:"per_page"`
+	MaxPerPage int    `json:"max_per_page"`
+}
+
+type User struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	ScreenName string `json:"screen_name"`
+	Icon       string `json:"icon"`
+}
+
+type SearchParams struct {
+	Q       string
+	Sort    string
+	Order   string
+	Page    int
+	PerPage int
+}
+
 type APIError struct {
 	StatusCode int
 	Status     string

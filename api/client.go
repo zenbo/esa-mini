@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	tkn "github.com/zenbo/esa-mini/token"
@@ -109,6 +110,41 @@ func (c *Client) CreatePost(team string, body PostBody) (*Post, error) {
 		return nil, err
 	}
 	return &post, nil
+}
+
+func (c *Client) SearchPosts(team string, params SearchParams) (*PostsResponse, error) {
+	path := fmt.Sprintf("/v1/teams/%s/posts?per_page=%d&page=%d",
+		team, params.PerPage, params.Page)
+	if params.Q != "" {
+		path += "&q=" + url.QueryEscape(params.Q)
+	}
+	if params.Sort != "" {
+		path += "&sort=" + url.QueryEscape(params.Sort)
+	}
+	if params.Order != "" {
+		path += "&order=" + url.QueryEscape(params.Order)
+	}
+	data, err := c.do("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp PostsResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Client) GetUser() (*User, error) {
+	data, err := c.do("GET", "/v1/user", nil)
+	if err != nil {
+		return nil, err
+	}
+	var user User
+	if err := json.Unmarshal(data, &user); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (c *Client) UpdatePost(team string, number int, body UpdatePostBody) (*Post, error) {

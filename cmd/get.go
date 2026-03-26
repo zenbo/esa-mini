@@ -57,19 +57,26 @@ func newGetCmd() *cobra.Command {
 				return nil
 			}
 
-			// ディレクトリ指定時は {number}.md で自動命名
-			outPath := output
+			// ディレクトリ or 末尾 / → savePost に委譲
+			isDirectory := false
 			if info, statErr := os.Stat(output); statErr == nil && info.IsDir() {
-				outPath = filepath.Join(output, fmt.Sprintf("%d.md", post.Number))
+				isDirectory = true
 			} else if output[len(output)-1] == filepath.Separator || output[len(output)-1] == '/' {
-				if mkErr := os.MkdirAll(output, 0755); mkErr != nil {
-					return cliError("esa-mini get", mkErr.Error(), "Check the output directory is writable.")
-				}
-				outPath = filepath.Join(output, fmt.Sprintf("%d.md", post.Number))
+				isDirectory = true
 			}
 
-			if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
-				return cliError("esa-mini get", err.Error(), "Check the output path is writable.")
+			var outPath string
+			if isDirectory {
+				p, err := savePost(output, team, post)
+				if err != nil {
+					return cliError("esa-mini get", err.Error(), "Check the output directory is writable.")
+				}
+				outPath = p
+			} else {
+				if err := os.WriteFile(output, []byte(content), 0644); err != nil {
+					return cliError("esa-mini get", err.Error(), "Check the output path is writable.")
+				}
+				outPath = output
 			}
 
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\nTitle: %s\nURL:   %s\n", outPath, post.Name, post.URL)

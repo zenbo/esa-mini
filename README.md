@@ -46,6 +46,12 @@ export ESA_ACCESS_TOKEN='your-token-here'
 # 所属チーム一覧
 esa-mini teams
 
+# 記事を検索して一覧表示
+esa-mini search myteam --category "dev/tips"
+
+# 検索結果を一括ダウンロード
+esa-mini search myteam --watched-by --output ./posts/
+
 # 記事を取得してファイルに保存
 esa-mini get myteam 123 --output ./posts/123.md
 

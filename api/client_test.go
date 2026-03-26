@@ -196,6 +196,94 @@ func TestUpdatePost(t *testing.T) {
 	}
 }
 
+func TestSearchPosts(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/teams/docs/posts" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		if r.Method != http.MethodGet {
+			t.Errorf("method = %q, want GET", r.Method)
+		}
+		q := r.URL.Query()
+		if q.Get("per_page") != "100" {
+			t.Errorf("per_page = %q, want 100", q.Get("per_page"))
+		}
+		if q.Get("q") != "@higuchi" {
+			t.Errorf("q = %q, want @higuchi", q.Get("q"))
+		}
+		if q.Get("sort") != "updated" {
+			t.Errorf("sort = %q, want updated", q.Get("sort"))
+		}
+		if q.Get("order") != "desc" {
+			t.Errorf("order = %q, want desc", q.Get("order"))
+		}
+
+		next := 2
+		resp := PostsResponse{
+			Posts: []Post{
+				{Number: 1, Name: "記事1"},
+				{Number: 2, Name: "記事2"},
+			},
+			TotalCount: 5,
+			Page:       1,
+			PerPage:    100,
+			NextPage:   &next,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	client := newTestClient(t, handler)
+	resp, err := client.SearchPosts("docs", SearchParams{
+		Q:       "@higuchi",
+		Sort:    "updated",
+		Order:   "desc",
+		Page:    1,
+		PerPage: 100,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.TotalCount != 5 {
+		t.Errorf("TotalCount = %d, want 5", resp.TotalCount)
+	}
+	if len(resp.Posts) != 2 {
+		t.Fatalf("len(Posts) = %d, want 2", len(resp.Posts))
+	}
+	if resp.NextPage == nil || *resp.NextPage != 2 {
+		t.Errorf("NextPage = %v, want 2", resp.NextPage)
+	}
+}
+
+func TestGetUser(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/user" {
+			t.Errorf("path = %q, want /v1/user", r.URL.Path)
+		}
+		user := User{
+			ID:         1,
+			Name:       "樋口",
+			ScreenName: "higuchi",
+			Icon:       "https://example.com/icon.png",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(user); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	client := newTestClient(t, handler)
+	user, err := client.GetUser()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if user.ScreenName != "higuchi" {
+		t.Errorf("ScreenName = %q, want higuchi", user.ScreenName)
+	}
+}
+
 func TestAPIError(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

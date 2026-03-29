@@ -9,20 +9,37 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zenbo/esa-mini/api"
 	"github.com/zenbo/esa-mini/frontmatter"
+	"github.com/zenbo/esa-mini/token"
 )
 
 func newGetCmd() *cobra.Command {
 	var output string
 
 	cmd := &cobra.Command{
-		Use:   "get <team> <number>",
+		Use:   "get [team] <number>",
 		Short: "Get a post and save as frontmatter Markdown",
-		Args:  cobra.ExactArgs(2),
+		Long: `Get a post and save as frontmatter Markdown.
+Team can be omitted if ESA_TEAM is set or a default team is saved via 'esa-mini team set'.`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			team := args[0]
-			number, err := strconv.Atoi(args[1])
+			var team, numberStr string
+			if len(args) == 2 {
+				team = args[0]
+				numberStr = args[1]
+			} else {
+				numberStr = args[0]
+				resolved, err := token.ResolveTeam()
+				if err != nil {
+					return cliError("esa-mini get", err.Error(), "Check config permissions.")
+				}
+				if resolved == "" {
+					return cliError("esa-mini get", "team is required", "Specify team as first argument, set ESA_TEAM, or run 'esa-mini team set'.")
+				}
+				team = resolved
+			}
+			number, err := strconv.Atoi(numberStr)
 			if err != nil {
-				return cliError("esa-mini get", fmt.Sprintf("invalid post number: %s", args[1]), "Post number must be an integer.")
+				return cliError("esa-mini get", fmt.Sprintf("invalid post number: %s", numberStr), "Post number must be an integer.")
 			}
 
 			client, err := api.NewClient()

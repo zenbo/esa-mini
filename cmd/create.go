@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zenbo/esa-mini/api"
 	"github.com/zenbo/esa-mini/frontmatter"
+	"github.com/zenbo/esa-mini/token"
 )
 
 func newCreateCmd() *cobra.Command {
@@ -24,7 +25,8 @@ func newCreateCmd() *cobra.Command {
 		Use:   "create [team]",
 		Short: "Create a new post from a frontmatter Markdown file",
 		Long: `Create a new post from a frontmatter Markdown file.
-Team can be omitted if the frontmatter contains a 'team' field.
+Team can be omitted if the frontmatter contains a 'team' field,
+ESA_TEAM is set, or a default team is saved via 'esa-mini team set'.
 
 File format:
   ---
@@ -45,13 +47,20 @@ File format:
 				return cliError("esa-mini create", err.Error(), "Check the file path and format.")
 			}
 
-			// CLI arg > frontmatter
+			// CLI arg > frontmatter > env/config
 			team := doc.Frontmatter.Team
 			if len(args) >= 1 {
 				team = args[0]
 			}
 			if team == "" {
-				return cliError("esa-mini create", "team is required", "Specify as argument or set 'team' in frontmatter.")
+				resolved, err := token.ResolveTeam()
+				if err != nil {
+					return cliError("esa-mini create", err.Error(), "Check config permissions.")
+				}
+				team = resolved
+			}
+			if team == "" {
+				return cliError("esa-mini create", "team is required", "Specify as argument, set 'team' in frontmatter, set ESA_TEAM, or run 'esa-mini team set'.")
 			}
 
 			body := api.PostBody{

@@ -23,20 +23,37 @@ go install github.com/zenbo/esa-mini@latest
 `esa-mini --help` を実行して利用可能なコマンドとオプションを確認する。
 
 注意: esa API は1ユーザーあたり15分間に75リクエストのレートリミットがある。大量取得時は --limit で件数を制限すること。
-`esa-mini token set` でトークンを保存するか、環境変数 ESA_ACCESS_TOKEN を設定する。
+初回セットアップではトークンとデフォルトチームの両方を保存しておくことを推奨する。
+
+```bash
+esa-mini token set   # アクセストークンを保存
+esa-mini team set    # API からチーム一覧を取得して保存（対話形式）
+```
+
+AI エージェントから設定する場合は、対話入力を避けるため引数で直接指定する。
+
+```bash
+esa-mini teams                 # チーム一覧を取得
+esa-mini team set <team-name>  # 引数でチーム名を直接保存
+```
+
+環境変数 ESA_ACCESS_TOKEN / ESA_TEAM でも設定できる。
 
 ## コマンド概要
 
 - `esa-mini token set` — アクセストークンを `~/.config/esa-mini/token` に保存
 - `esa-mini token show` — 保存済みトークンを確認（マスク表示）
 - `esa-mini token delete` — 保存済みトークンを削除
+- `esa-mini team set` — デフォルトチームを `~/.config/esa-mini/team` に保存
+- `esa-mini team show` — 保存済みデフォルトチームを確認
+- `esa-mini team delete` — 保存済みデフォルトチームを削除
 - `esa-mini teams` — 所属チーム一覧を表示
-- `esa-mini categories <team> [flags]` — カテゴリ一覧を表示（`--match` で部分一致検索、`--prefix` で前方一致、`--top` でトップレベルのみ）
-- `esa-mini tags <team> [flags]` — タグ一覧を表示（`--match` で部分一致フィルタ）
-- `esa-mini search <team> [flags]` — 記事を検索し一覧表示（`--output` で一括保存）
-- `esa-mini get <team> <number> --output <path>` — 記事を frontmatter 付き Markdown として保存（ディレクトリ指定時は `{number}.md` で自動命名）
-- `esa-mini create [team] --file <path>` — ファイルから新規記事を作成（team 省略時は frontmatter から取得）
-- `esa-mini update [team] [number] --file <path>` — ファイルから既存記事を更新（team / number 省略時は frontmatter から取得）
+- `esa-mini categories [team] [flags]` — カテゴリ一覧を表示（`--match` で部分一致検索、`--prefix` で前方一致、`--top` でトップレベルのみ）
+- `esa-mini tags [team] [flags]` — タグ一覧を表示（`--match` で部分一致フィルタ）
+- `esa-mini search [team] [flags]` — 記事を検索し一覧表示（`--output` で一括保存）
+- `esa-mini get [team] <number> --output <path>` — 記事を frontmatter 付き Markdown として保存（ディレクトリ指定時は `{number}.md` で自動命名）
+- `esa-mini create [team] --file <path>` — ファイルから新規記事を作成（team 省略時は frontmatter / 環境変数 / 設定ファイルから取得）
+- `esa-mini update [team] [number] --file <path>` — ファイルから既存記事を更新（team / number 省略時は frontmatter / 環境変数 / 設定ファイルから取得）
 
 ## 記事ファイルのフォーマット
 
@@ -58,6 +75,8 @@ wip: true
 ```
 
 `get` で取得したファイルにはすべてのフィールドが含まれる。`create` / `update` では frontmatter の `team` / `number` を使うため CLI 引数での指定は省略可能。
+
+team はすべてのコマンドで省略可能。優先順位: CLI 引数 > 環境変数 `ESA_TEAM` > 設定ファイル `~/.config/esa-mini/team`（> frontmatter（create/update のみ））。
 
 ## 推奨ワークフロー
 

@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zenbo/esa-mini/api"
 	"github.com/zenbo/esa-mini/frontmatter"
+	"github.com/zenbo/esa-mini/token"
 )
 
 func newUpdateCmd() *cobra.Command {
@@ -24,7 +25,8 @@ func newUpdateCmd() *cobra.Command {
 		Use:   "update [team] [number]",
 		Short: "Update an existing post from a frontmatter Markdown file",
 		Long: `Update an existing post from a frontmatter Markdown file.
-Team and number can be omitted if the frontmatter contains 'team' and 'number' fields.
+Team and number can be omitted if the frontmatter contains 'team' and 'number' fields,
+ESA_TEAM is set, or a default team is saved via 'esa-mini team set'.
 CLI arguments override frontmatter values.`,
 		Args: cobra.RangeArgs(0, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -33,7 +35,7 @@ CLI arguments override frontmatter values.`,
 				return cliError("esa-mini update", err.Error(), "Check the file path and format.")
 			}
 
-			// CLI args > frontmatter
+			// CLI args > frontmatter > env/config
 			team := doc.Frontmatter.Team
 			number := doc.Frontmatter.Number
 			if len(args) >= 1 {
@@ -46,7 +48,14 @@ CLI arguments override frontmatter values.`,
 				}
 			}
 			if team == "" {
-				return cliError("esa-mini update", "team is required", "Specify as argument or set 'team' in frontmatter.")
+				resolved, err := token.ResolveTeam()
+				if err != nil {
+					return cliError("esa-mini update", err.Error(), "Check config permissions.")
+				}
+				team = resolved
+			}
+			if team == "" {
+				return cliError("esa-mini update", "team is required", "Specify as argument, set 'team' in frontmatter, set ESA_TEAM, or run 'esa-mini team set'.")
 			}
 			if number == 0 {
 				return cliError("esa-mini update", "post number is required", "Specify as argument or set 'number' in frontmatter.")

@@ -434,6 +434,8 @@ func TestCreateCmdTeamMissing(t *testing.T) {
 	}
 
 	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_TEAM", "")
+	t.Setenv("HOME", t.TempDir())
 
 	cmd := NewRootCmd()
 	errOut := &bytes.Buffer{}
@@ -500,6 +502,8 @@ func TestUpdateCmdTeamMissing(t *testing.T) {
 	}
 
 	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_TEAM", "")
+	t.Setenv("HOME", t.TempDir())
 
 	cmd := NewRootCmd()
 	errOut := &bytes.Buffer{}
@@ -869,5 +873,421 @@ func TestTokenDeleteNoToken(t *testing.T) {
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error for deleting non-existent token")
+	}
+}
+
+func TestTeamSetAndShowSingleTeam(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.TeamsResponse{
+			Teams: []api.Team{
+				{Name: "docs", URL: "https://docs.esa.io"},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("HOME", t.TempDir())
+
+	// set (single team = auto-save)
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"team", "set"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team set failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Team saved: docs") {
+		t.Errorf("stdout = %q, missing 'Team saved: docs'", out.String())
+	}
+
+	// show
+	cmd = NewRootCmd()
+	out = &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"team", "show"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team show failed: %v", err)
+	}
+	shown := strings.TrimSpace(out.String())
+	if shown != "docs" {
+		t.Errorf("team show = %q, want %q", shown, "docs")
+	}
+}
+
+func TestTeamSetMultipleTeams(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.TeamsResponse{
+			Teams: []api.Team{
+				{Name: "docs", URL: "https://docs.esa.io"},
+				{Name: "dev", URL: "https://dev.esa.io"},
+				{Name: "design", URL: "https://design.esa.io"},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("HOME", t.TempDir())
+
+	// select 2nd team
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetIn(strings.NewReader("2\n"))
+	cmd.SetArgs([]string{"team", "set"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team set failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Team saved: dev") {
+		t.Errorf("stdout = %q, missing 'Team saved: dev'", out.String())
+	}
+
+	// show
+	cmd = NewRootCmd()
+	out = &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"team", "show"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team show failed: %v", err)
+	}
+	shown := strings.TrimSpace(out.String())
+	if shown != "dev" {
+		t.Errorf("team show = %q, want %q", shown, "dev")
+	}
+}
+
+func TestTeamSetWithArg(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+
+	// set with argument (no API call needed)
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"team", "set", "myteam"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team set failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Team saved: myteam") {
+		t.Errorf("stdout = %q, missing 'Team saved: myteam'", out.String())
+	}
+
+	// show
+	cmd = NewRootCmd()
+	out = &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"team", "show"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team show failed: %v", err)
+	}
+	if strings.TrimSpace(out.String()) != "myteam" {
+		t.Errorf("team show = %q, want %q", strings.TrimSpace(out.String()), "myteam")
+	}
+}
+
+func TestTeamDeleteCmd(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.TeamsResponse{
+			Teams: []api.Team{{Name: "disposable", URL: "https://disposable.esa.io"}},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("HOME", t.TempDir())
+
+	// set first
+	cmd := NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"team", "set"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team set failed: %v", err)
+	}
+
+	// delete
+	cmd = NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"team", "delete"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("team delete failed: %v", err)
+	}
+	if !strings.Contains(out.String(), "Team deleted.") {
+		t.Errorf("stdout = %q, missing 'Team deleted.'", out.String())
+	}
+
+	// show should fail
+	cmd = NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"team", "show"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("expected error for show after delete")
+	}
+}
+
+func TestTeamDeleteNoTeam(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	cmd := NewRootCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"team", "delete"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for deleting non-existent team")
+	}
+}
+
+func TestGetCmdWithDefaultTeam(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		post := api.Post{
+			Number:    123,
+			Name:      "テスト記事",
+			BodyMd:    "# Hello",
+			URL:       "https://docs.esa.io/posts/123",
+			WIP:       false,
+			Tags:      []string{"go"},
+			Category:  "dev/tips",
+			UpdatedAt: "2025-07-01T12:00:00+09:00",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(post); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("ESA_TEAM", "docs")
+
+	outFile := filepath.Join(t.TempDir(), "test.md")
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"get", "123", "--output", outFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(out.String(), "Saved:") {
+		t.Errorf("stdout = %q, missing Saved", out.String())
+	}
+}
+
+func TestGetCmdNoTeam(t *testing.T) {
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_TEAM", "")
+	t.Setenv("HOME", t.TempDir())
+
+	outFile := filepath.Join(t.TempDir(), "test.md")
+	cmd := NewRootCmd()
+	cmd.SetArgs([]string{"get", "123", "--output", outFile})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for missing team")
+	}
+	if !strings.Contains(err.Error(), "team is required") {
+		t.Errorf("error = %q, should mention team", err.Error())
+	}
+}
+
+func TestSearchCmdWithDefaultTeam(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		resp := api.PostsResponse{
+			Posts:      []api.Post{},
+			TotalCount: 0,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("ESA_TEAM", "docs")
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"search", "--query", "test"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCategoriesCmdWithDefaultTeam(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		resp := api.CategoriesPathsResponse{
+			Categories: []api.CategoryPath{},
+			TotalCount: 0,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("ESA_TEAM", "docs")
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"categories"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTagsCmdWithDefaultTeam(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		resp := api.TagsResponse{
+			Tags:       []api.Tag{},
+			TotalCount: 0,
+			Page:       1,
+			PerPage:    100,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("ESA_TEAM", "docs")
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"tags"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCreateCmdTeamFromConfig(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		resp := api.Post{
+			Number:    456,
+			Name:      "新しい記事",
+			URL:       "https://docs.esa.io/posts/456",
+			BodyMd:    "本文",
+			WIP:       true,
+			UpdatedAt: "2025-01-01T00:00:00+09:00",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("ESA_TEAM", "docs")
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\ntitle: 新しい記事\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"create", "--file", inputFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(out.String(), "Created: #456") {
+		t.Errorf("stdout = %q, missing Created: #456", out.String())
+	}
+}
+
+func TestUpdateCmdTeamFromConfig(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, "/teams/docs/") {
+			t.Errorf("path = %q, want team 'docs'", r.URL.Path)
+		}
+		resp := api.Post{
+			Number: 123,
+			Name:   "更新された記事",
+			URL:    "https://docs.esa.io/posts/123",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+	t.Setenv("ESA_TEAM", "docs")
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	content := "---\nnumber: 123\ntitle: 更新された記事\n---\n\n更新本文\n"
+	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"update", "--file", inputFile})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(out.String(), "Updated: #123") {
+		t.Errorf("stdout = %q, missing Updated: #123", out.String())
 	}
 }

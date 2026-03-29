@@ -58,13 +58,52 @@ export ESA_ACCESS_TOKEN='your-token-here'
 
 環境変数が設定されている場合は保存済みトークンより優先される。
 
+## デフォルトチーム
+
+チーム名を保存しておくと、各コマンドで毎回指定する必要がなくなる。
+
+### チーム名を保存する（推奨）
+
+```bash
+esa-mini team set
+```
+
+API からチーム一覧を取得し、1チームなら自動保存、複数チームなら選択肢を表示する。
+チーム名を直接指定することもできる。
+
+```bash
+esa-mini team set myteam
+```
+
+チーム名は `~/.config/esa-mini/team` に保存される。
+
+```bash
+# 保存済みチーム名の確認
+esa-mini team show
+
+# 保存済みチーム名の削除
+esa-mini team delete
+```
+
+### 環境変数で設定する
+
+```bash
+export ESA_TEAM='myteam'
+```
+
+環境変数が設定されている場合は保存済みチーム名より優先される。direnv 等でプロジェクトごとに切り替えると便利。
+
+### 優先順位
+
+CLI 引数 > 環境変数 `ESA_TEAM` > 設定ファイル（> frontmatter（create/update のみ））
+
 ## 使い方
 
 ```bash
 # 所属チーム一覧
 esa-mini teams
 
-# カテゴリ一覧
+# カテゴリ一覧（デフォルトチーム設定済みなら team 省略可）
 esa-mini categories myteam
 
 # トップレベルカテゴリのみ
@@ -100,6 +139,12 @@ esa-mini update myteam 123 --file ./posts/123.md
 # frontmatter に team / number があれば引数を省略できる
 esa-mini create --file ./posts/new.md
 esa-mini update --file ./posts/123.md
+
+# デフォルトチーム設定済みなら team 引数を省略できる
+esa-mini get 123 --output ./posts/123.md
+esa-mini search --category "dev/tips"
+esa-mini categories --match "設計"
+esa-mini tags --match "go"
 ```
 
 記事ファイルは YAML frontmatter 付き Markdown 形式（`get` で取得したファイルにはすべてのフィールドが含まれる）:

@@ -136,6 +136,10 @@ esa-mini create myteam --file ./posts/new.md
 # ファイルから既存記事を更新
 esa-mini update myteam 123 --file ./posts/123.md
 
+# create / update はデフォルトでサーバの最新状態（number, url, updated_at 等）を
+# 入力ファイルの frontmatter に書き戻す。書き戻したくない場合は --no-write-back。
+esa-mini update myteam 123 --file ./posts/123.md --no-write-back
+
 # frontmatter に team / number があれば引数を省略できる
 esa-mini create --file ./posts/new.md
 esa-mini update --file ./posts/123.md

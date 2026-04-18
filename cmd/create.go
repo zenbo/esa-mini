@@ -13,12 +13,13 @@ import (
 
 func newCreateCmd() *cobra.Command {
 	var (
-		file     string
-		name     string
-		tags     string
-		category string
-		wip      bool
-		message  string
+		file        string
+		name        string
+		tags        string
+		category    string
+		wip         bool
+		message     string
+		noWriteBack bool
 	)
 
 	cmd := &cobra.Command{
@@ -105,24 +106,10 @@ File format:
 				return cliError("esa-mini create", formatAPIError(err), "Check your input and permissions.")
 			}
 
-			// Write back frontmatter with full post metadata
-			wip := post.WIP
-			fm := frontmatter.Frontmatter{
-				Team:      team,
-				Number:    post.Number,
-				Title:     post.Name,
-				URL:       post.URL,
-				Category:  post.Category,
-				Tags:      post.Tags,
-				WIP:       &wip,
-				UpdatedAt: post.UpdatedAt,
-			}
-			content, err := frontmatter.Format(fm, post.BodyMd)
-			if err != nil {
-				return cliError("esa-mini create", err.Error(), "This is an internal error. Please report it.")
-			}
-			if err := os.WriteFile(file, []byte(content), 0644); err != nil {
-				return cliError("esa-mini create", err.Error(), "Check the file path is writable.")
+			if !noWriteBack {
+				if err := writeBackPost(file, team, post); err != nil {
+					return cliError("esa-mini create", err.Error(), "Check the file path is writable.")
+				}
 			}
 
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Created: #%d\nTitle:   %s\nURL:     %s\n", post.Number, post.Name, post.URL)
@@ -137,6 +124,7 @@ File format:
 	cmd.Flags().StringVar(&category, "category", "", "Category path (overrides frontmatter)")
 	cmd.Flags().BoolVar(&wip, "wip", true, "WIP status (overrides frontmatter)")
 	cmd.Flags().StringVar(&message, "message", "", "Commit message")
+	cmd.Flags().BoolVar(&noWriteBack, "no-write-back", false, "Do not write server response (number, url, updated_at, etc.) back to the input file")
 
 	return cmd
 }

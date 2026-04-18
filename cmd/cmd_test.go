@@ -308,9 +308,14 @@ func TestUpdateCmd(t *testing.T) {
 			t.Errorf("method = %q, want PATCH", r.Method)
 		}
 		resp := api.Post{
-			Number: 123,
-			Name:   "更新された記事",
-			URL:    "https://docs.esa.io/posts/123",
+			Number:    123,
+			Name:      "更新された記事",
+			URL:       "https://docs.esa.io/posts/123",
+			BodyMd:    "更新本文",
+			Category:  "dev/tips",
+			Tags:      []string{"go"},
+			WIP:       false,
+			UpdatedAt: "2025-02-01T12:00:00+09:00",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -322,7 +327,7 @@ func TestUpdateCmd(t *testing.T) {
 	t.Setenv("ESA_API_BASE_URL", server)
 
 	inputFile := filepath.Join(t.TempDir(), "input.md")
-	content := "---\ntitle: 更新された記事\n---\n\n更新本文\n"
+	content := "---\ntitle: 更新された記事\nupdated_at: 2025-01-01T00:00:00+09:00\n---\n\n更新本文\n"
 	if err := os.WriteFile(inputFile, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -339,6 +344,110 @@ func TestUpdateCmd(t *testing.T) {
 	stdout := out.String()
 	if !strings.Contains(stdout, "Updated: #123") {
 		t.Errorf("stdout = %q, missing Updated", stdout)
+	}
+
+	// Verify frontmatter was written back with latest server state
+	updated, err := os.ReadFile(inputFile)
+	if err != nil {
+		t.Fatalf("failed to read updated file: %v", err)
+	}
+	updatedStr := string(updated)
+	if !strings.Contains(updatedStr, "number: 123") {
+		t.Errorf("updated file missing number, got:\n%s", updatedStr)
+	}
+	if !strings.Contains(updatedStr, "url: https://docs.esa.io/posts/123") {
+		t.Errorf("updated file missing url, got:\n%s", updatedStr)
+	}
+	if !strings.Contains(updatedStr, "2025-02-01T12:00:00+09:00") {
+		t.Errorf("updated file missing refreshed updated_at, got:\n%s", updatedStr)
+	}
+	if strings.Contains(updatedStr, "2025-01-01T00:00:00") {
+		t.Errorf("updated file still contains stale updated_at, got:\n%s", updatedStr)
+	}
+}
+
+func TestUpdateCmdNoWriteBack(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.Post{
+			Number:    123,
+			Name:      "更新された記事",
+			URL:       "https://docs.esa.io/posts/123",
+			BodyMd:    "更新本文",
+			UpdatedAt: "2025-02-01T12:00:00+09:00",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	original := "---\ntitle: 更新された記事\nupdated_at: 2025-01-01T00:00:00+09:00\n---\n\n更新本文\n"
+	if err := os.WriteFile(inputFile, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"update", "docs", "123", "--file", inputFile, "--no-write-back"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	after, err := os.ReadFile(inputFile)
+	if err != nil {
+		t.Fatalf("failed to read file: %v", err)
+	}
+	if string(after) != original {
+		t.Errorf("file was modified despite --no-write-back:\ngot:\n%s\nwant:\n%s", string(after), original)
+	}
+}
+
+func TestCreateCmdNoWriteBack(t *testing.T) {
+	server := setupTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := api.Post{
+			Number:    456,
+			Name:      "新しい記事",
+			URL:       "https://docs.esa.io/posts/456",
+			BodyMd:    "本文",
+			UpdatedAt: "2025-01-01T00:00:00+09:00",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatal(err)
+		}
+	}))
+
+	t.Setenv("ESA_ACCESS_TOKEN", "test-token")
+	t.Setenv("ESA_API_BASE_URL", server)
+
+	inputFile := filepath.Join(t.TempDir(), "input.md")
+	original := "---\ntitle: 新しい記事\n---\n\n本文\n"
+	if err := os.WriteFile(inputFile, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCmd()
+	out := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetArgs([]string{"create", "docs", "--file", inputFile, "--no-write-back"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	after, err := os.ReadFile(inputFile)
+	if err != nil {
+		t.Fatalf("failed to read file: %v", err)
+	}
+	if string(after) != original {
+		t.Errorf("file was modified despite --no-write-back:\ngot:\n%s\nwant:\n%s", string(after), original)
 	}
 }
 

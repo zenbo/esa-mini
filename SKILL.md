@@ -52,8 +52,8 @@ esa-mini team set <team-name>  # 引数でチーム名を直接保存
 - `esa-mini tags [team] [flags]` — タグ一覧を表示（`--match` で部分一致フィルタ）
 - `esa-mini search [team] [flags]` — 記事を検索し一覧表示（`--output` で一括保存）
 - `esa-mini get [team] <number> --output <path>` — 記事を frontmatter 付き Markdown として保存（ディレクトリ指定時は `{number}.md` で自動命名）
-- `esa-mini create [team] --file <path>` — ファイルから新規記事を作成（team 省略時は frontmatter / 環境変数 / 設定ファイルから取得）
-- `esa-mini update [team] [number] --file <path>` — ファイルから既存記事を更新（team / number 省略時は frontmatter / 環境変数 / 設定ファイルから取得）
+- `esa-mini create [team] --file <path>` — ファイルから新規記事を作成（team 省略時は frontmatter / 環境変数 / 設定ファイルから取得）。成功時はサーバ応答を frontmatter に書き戻す（抑止するには `--no-write-back`）
+- `esa-mini update [team] [number] --file <path>` — ファイルから既存記事を更新（team / number 省略時は frontmatter / 環境変数 / 設定ファイルから取得）。成功時はサーバ応答（更新後の `updated_at` 等）を frontmatter に書き戻す（抑止するには `--no-write-back`）
 
 ## 記事ファイルのフォーマット
 

@@ -13,12 +13,13 @@ import (
 
 func newUpdateCmd() *cobra.Command {
 	var (
-		file     string
-		name     string
-		tags     string
-		category string
-		wip      bool
-		message  string
+		file        string
+		name        string
+		tags        string
+		category    string
+		wip         bool
+		message     string
+		noWriteBack bool
 	)
 
 	cmd := &cobra.Command{
@@ -99,6 +100,12 @@ CLI arguments override frontmatter values.`,
 				return cliError("esa-mini update", formatAPIError(err), "Check your input and permissions.")
 			}
 
+			if !noWriteBack {
+				if err := writeBackPost(file, team, post); err != nil {
+					return cliError("esa-mini update", err.Error(), "Check the file path is writable.")
+				}
+			}
+
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated: #%d\nTitle:   %s\nURL:     %s\n", post.Number, post.Name, post.URL)
 			return nil
 		},
@@ -111,6 +118,7 @@ CLI arguments override frontmatter values.`,
 	cmd.Flags().StringVar(&category, "category", "", "Category path (overrides frontmatter)")
 	cmd.Flags().BoolVar(&wip, "wip", true, "WIP status (overrides frontmatter)")
 	cmd.Flags().StringVar(&message, "message", "", "Commit message")
+	cmd.Flags().BoolVar(&noWriteBack, "no-write-back", false, "Do not write server response (updated_at, etc.) back to the input file")
 
 	return cmd
 }
